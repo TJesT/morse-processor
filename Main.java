@@ -1,6 +1,5 @@
 import java.util.List;
 import java.util.Scanner;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -10,7 +9,7 @@ public class Main {
 
         Scanner scanner = new Scanner(System.in);
 
-        for(int i = 0; i < 2 && scanner.hasNextLine(); ++i){
+        while (scanner.hasNextLine()) {
             String line = scanner.nextLine().trim();
 
             List<String> arg = Stream.of(line.split(" "))
