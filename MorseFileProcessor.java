@@ -1,20 +1,42 @@
+import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Scanner;
+import java.util.TreeMap;
 
 public class MorseFileProcessor {
+    private class Task extends Thread {
+        Method method;
+        TreeMap<String, String> arguments;
+
+        Task(Method method, TreeMap<String, String> arguments) {
+            this.method = method;
+            this.arguments = arguments;
+        }
+        @Override
+        public void run() {
+            MorseFileProcessor mfp = MorseFileProcessor.getInstance();
+            try {
+                method.invoke(mfp, arguments.get("file-name"), arguments.get("code-table"));
+                System.out.println("Thread " + Thread.currentThread().getId()
+                        + " is running");
+            } catch (NullPointerException | IllegalAccessException | InvocationTargetException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     private static MorseFileProcessor instance;
-    private final HashMap<String, Method> commands;
-    private final HashMap<String, Object> arguments;
+    private final TreeMap<String, Method> commands;
 
     private MorseFileProcessor() throws NoSuchMethodException {
-        this.commands = new HashMap<>();
-        this.commands.put("code", MorseFileProcessor.class.getDeclaredMethod("encode"));
-        this.commands.put("decode", MorseFileProcessor.class.getDeclaredMethod("decode"));
-
-        this.arguments = new HashMap<>();
-        this.arguments.put("file-name", null);
+        this.commands = new TreeMap<>();
+        this.commands.put("code", MorseFileProcessor.class
+                .getDeclaredMethod("encode", String.class, String.class));
+        this.commands.put("decode", MorseFileProcessor.class
+                .getDeclaredMethod("decode", String.class, String.class));
     }
 
     public static MorseFileProcessor getInstance() {
@@ -29,12 +51,25 @@ public class MorseFileProcessor {
     }
 
     public void execute(String cmd, List<String> args) {
+        TreeMap<String, String> arguments = new TreeMap<>();
+        arguments.put("file-name",  null);
+        arguments.put("code-table", null);
+        arguments.put("out-name",   null);
+
         while(!args.isEmpty()) {
             String flag = args.get(0), argument = args.get(1);
             args.remove(0); args.remove(0);
             switch (flag) {
                 case "-f": {
-                    this.arguments.put("file-name", argument);
+                    arguments.put("file-name", argument);
+                    break;
+                }
+                case "-t": {
+                    arguments.put("code-table", argument);
+                    break;
+                }
+                case "-o": {
+                    arguments.put("out-name", argument);
                     break;
                 }
                 default: {
@@ -43,63 +78,38 @@ public class MorseFileProcessor {
                 }
             }
         }
-        try {
-            this.commands.get(cmd).invoke(getInstance());
+        MorseFileProcessor.Task task = new MorseFileProcessor.Task(this.commands.get(cmd), arguments);
+        task.start();
+    }
 
-        } catch (NullPointerException | IllegalAccessException | InvocationTargetException e) {
+    private void encode(String file_name, String table_name) {
+        System.out.println("Encode of " + file_name + " invoked ! "
+                + ((table_name==null)?"":("Using encoding table " + table_name + " !")));
+        try {
+            TableEncoder encoder = new TableEncoder(table_name);
+            System.out.println("Encoder created with table `" + table_name + '`');
+            File file = new File(file_name);
+            Scanner scanner = new Scanner(file);
+
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void encode() {
-        Encoder encoder = new Encoder(this.arguments.get("file-name").toString());
-        encoder.start();
-    }
-
-    private void decode() {
-        Decoder decoder = new Decoder(this.arguments.get("file-name").toString());
-        decoder.start();
-    }
-}
-
-class Encoder extends Thread {
-    String file_name;
-    public Encoder(String file_name) {
-        this.file_name = file_name;
-    }
-
-    @Override
-    public void run() {
+    private void decode(String file_name, String table_name) {
+        String out_file = "decoded." + file_name;
+        System.out.println("Decode of " + file_name + " invoked ! "
+                + ((table_name==null)?"":("Using decoding table " + table_name + " !")));
         try {
-            System.out.println(
-                    "Encode of " + this.file_name
-                    + " invoked ! Thread "
-                    + Thread.currentThread().getId()
-                    + " is running .");
-        }
-        catch (Exception e) {
-            System.out.printf("Exception caught !");
+            TableDecoder decoder = new TableDecoder(table_name);
+            System.out.println("Decoder created with table `" + table_name + '`');
+            File file = new File(file_name);
+            Scanner scanner = new Scanner(file);
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }
 
-class Decoder extends Thread {
-    String file_name;
-    public Decoder(String file_name) {
-        this.file_name = file_name;
-    }
 
-    @Override
-    public void run() {
-        try {
-            System.out.println(
-                    "Decode of " + this.file_name
-                    + " invoked ! Thread "
-                    + Thread.currentThread().getId()
-                    + " is running .");
-        }
-        catch (Exception e) {
-            System.out.printf("Exception caught !");
-        }
-    }
-}

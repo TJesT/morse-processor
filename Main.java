@@ -10,7 +10,7 @@ public class Main {
 
         Scanner scanner = new Scanner(System.in);
 
-        for(int i = 0; i < 10 && scanner.hasNextLine(); ++i){
+        for(int i = 0; i < 2 && scanner.hasNextLine(); ++i){
             String line = scanner.nextLine().trim();
 
             List<String> arg = Stream.of(line.split(" "))
